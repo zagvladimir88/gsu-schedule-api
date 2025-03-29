@@ -11,15 +11,20 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.zagvladimir.util.MessageConstants.*;
+
 @Service
 @RequiredArgsConstructor
 public class ProduceService {
@@ -77,13 +82,47 @@ public class ProduceService {
     }
 
     public void getListOfGroups(Long chatId) {
-        String groups = groupRepository.findAll().stream()
-                .map(Group::getName)
-                .reduce((a, b) -> a + ", " + b)
-                .orElse(NO_GROUPS_AVAILABLE);
+        Map<Integer, List<String>> groupedByCourse = groupRepository.findAll().stream()
+                .collect(Collectors.groupingBy(Group::getCourse,
+                        Collectors.mapping(Group::getName, Collectors.collectingAndThen(Collectors.toList(), list -> {
+                            list.sort(String::compareTo);
+                            return list;
+                        }))));
 
-        sendResponse(groups, chatId);
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        int buttonsPerRow = 3;
+
+        for (Map.Entry<Integer, List<String>> entry : groupedByCourse.entrySet()) {
+            List<InlineKeyboardButton> headerRow = new ArrayList<>();
+            InlineKeyboardButton headerButton = new InlineKeyboardButton();
+            headerButton.setText("📚 Курс " + entry.getKey());
+            headerButton.setCallbackData("#");
+            headerRow.add(headerButton);
+            rows.add(headerRow);
+
+            List<InlineKeyboardButton> row = new ArrayList<>();
+            for (String groupName : entry.getValue()) {
+                InlineKeyboardButton button = new InlineKeyboardButton();
+                button.setText(groupName);
+                button.setCallbackData("/set_group " + groupName);
+
+                row.add(button);
+                if (row.size() == buttonsPerRow) {
+                    rows.add(new ArrayList<>(row));
+                    row.clear();
+                }
+            }
+
+            if (!row.isEmpty()) {
+                rows.add(new ArrayList<>(row));
+            }
+        }
+
+        inlineKeyboardMarkup.setKeyboard(rows);
+        sendResponseWithButton(inlineKeyboardMarkup, chatId, "Список групп");
     }
+
 
     private void sendScheduleForGroup(Long chatId, Group group) {
         List<Schedule> schedules = scheduleRepository.findByGroupAndDate(group, LocalDate.now());
@@ -114,6 +153,14 @@ public class ProduceService {
 
     private void sendResponse(String text, Long chatId) {
         sendResponse(new SendMessage(chatId.toString(), text));
+    }
+
+    private void sendResponseWithButton(InlineKeyboardMarkup inlineKeyboardMarkup, Long chatId, String text) {
+        sendResponse(SendMessage.builder()
+                .chatId(chatId)
+                .text(text)
+                .replyMarkup(inlineKeyboardMarkup)
+                .build());
     }
 
     private void sendResponse(SendMessage message) {

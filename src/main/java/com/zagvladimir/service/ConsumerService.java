@@ -22,14 +22,15 @@ public class ConsumerService {
             produceService.processMessage(message);
         } catch (Exception e) {
             log.error("Error processing message: {}", message, e);
-            handleFailedMessage(message, e);
+            handleFailedMessage(message);
         }
     }
 
-    private void handleFailedMessage(SendMessage message, Exception e) {
-        SendMessage errorMessage = new SendMessage();
-        errorMessage.setChatId(message.getChatId());
-        errorMessage.setText("Произошла ошибка при обработке запроса");
-        produceService.processMessage(errorMessage);
+    private void handleFailedMessage(SendMessage message) {
+        produceService.processMessage(SendMessage.builder()
+                .chatId(message.getChatId())
+                .text("Произошла ошибка при обработке запроса")
+                .build()
+        );
     }
 }
