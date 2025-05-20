@@ -82,12 +82,11 @@ public class ProduceService {
     }
 
     public void getListOfGroups(Long chatId) {
-        Map<Integer, List<String>> groupedByCourse = groupRepository.findAll().stream()
-                .collect(Collectors.groupingBy(Group::getCourse,
-                        Collectors.mapping(Group::getName, Collectors.collectingAndThen(Collectors.toList(), list -> {
-                            list.sort(String::compareTo);
-                            return list;
-                        }))));
+        Map<Integer, List<String>> groupedByCourse = groupRepository.findAllGroupedAndSorted().stream()
+                .collect(Collectors.groupingBy(
+                        row -> (Integer) row[0],
+                        Collectors.mapping(row -> (String) row[1], Collectors.toList())
+                ));
 
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();
