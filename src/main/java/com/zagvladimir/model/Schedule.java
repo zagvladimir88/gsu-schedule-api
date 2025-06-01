@@ -40,6 +40,10 @@ public class Schedule {
     @JoinColumn(name = "classroom_id", nullable = false)
     private Classroom classroom;
 
+    @ManyToOne
+    @JoinColumn(name = "lesson_type_id", nullable = false)
+    private LessonType lessonType;
+
     @Column(nullable = false)
     private LocalDate date;
 

@@ -142,7 +142,7 @@ public class ProduceService {
     }
 
     private void sendWeeklyScheduleForGroup(Long chatId, Group group) {
-        List<Schedule> schedules = scheduleRepository.findByGroupAndDateBetween(group, LocalDate.now(), LocalDate.now().plusDays(7) );
+        List<Schedule> schedules = scheduleRepository.findByGroupAndDateBetween(group, LocalDate.now(), LocalDate.now().plusDays(7));
         String text = schedules.isEmpty()
                 ? NO_SCHEDULE_FOR_TODAY
                 : textGenerator.createTextForMessage(schedules);
@@ -169,7 +169,11 @@ public class ProduceService {
     }
 
     private void sendResponse(String text, Long chatId) {
-        sendResponse(new SendMessage(chatId.toString(), text));
+        sendResponse(SendMessage.builder()
+                .chatId(chatId)
+                .text(text)
+                .parseMode("HTML")
+                .build());
     }
 
     private void sendResponseWithButton(InlineKeyboardMarkup inlineKeyboardMarkup, Long chatId, String text) {

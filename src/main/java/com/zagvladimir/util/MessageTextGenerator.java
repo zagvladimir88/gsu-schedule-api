@@ -50,9 +50,13 @@ public class MessageTextGenerator {
     }
 
     private String formatScheduleEntry(Schedule schedule) {
+        String lessonTypeName = schedule.getLessonType() != null
+                ? "<b>" + "(" + schedule.getLessonType().getName() + ")" + "</b>"
+                : "";
+
         return String.format(SCHEDULE_ENTRY_FORMAT,
                 schedule.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm")),
-                schedule.getSubject().getName(),
+                schedule.getSubject().getName() + " " + lessonTypeName,
                 schedule.getClassroom().getBuilding().getName(),
                 schedule.getClassroom().getNumber(),
                 schedule.getTeacher().getFullName()
