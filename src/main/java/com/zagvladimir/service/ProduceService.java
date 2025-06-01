@@ -40,6 +40,7 @@ public class ProduceService {
     private final Map<String, Consumer<CommandContext>> commandHandlers = Map.of(
             "get_groups", ctx -> getListOfGroups(ctx.chatId()),
             "get_schedule", ctx -> getSchedule(ctx.chatId()),
+            "get_weekly_schedule", ctx -> getWeeklySchedule(ctx.chatId()),
             "set_group", ctx -> handleGroupSubscription(ctx.chatId(), ctx.arguments())
     );
 
@@ -65,6 +66,14 @@ public class ProduceService {
         subscriptionRepository.findByTelegramChatId(chatId)
                 .ifPresentOrElse(
                         subscription -> sendScheduleForGroup(chatId, subscription.getGroup()),
+                        () -> sendResponse(FAILED_SCHEDULE_FETCH, chatId)
+                );
+    }
+
+    public void getWeeklySchedule(Long chatId) {
+        subscriptionRepository.findByTelegramChatId(chatId)
+                .ifPresentOrElse(
+                        subscription -> sendWeeklyScheduleForGroup(chatId, subscription.getGroup()),
                         () -> sendResponse(FAILED_SCHEDULE_FETCH, chatId)
                 );
     }
@@ -125,6 +134,15 @@ public class ProduceService {
 
     private void sendScheduleForGroup(Long chatId, Group group) {
         List<Schedule> schedules = scheduleRepository.findByGroupAndDate(group, LocalDate.now());
+        String text = schedules.isEmpty()
+                ? NO_SCHEDULE_FOR_TODAY
+                : textGenerator.createTextForMessage(schedules);
+
+        sendResponse(text, chatId);
+    }
+
+    private void sendWeeklyScheduleForGroup(Long chatId, Group group) {
+        List<Schedule> schedules = scheduleRepository.findByGroupAndDateBetween(group, LocalDate.now(), LocalDate.now().plusDays(7) );
         String text = schedules.isEmpty()
                 ? NO_SCHEDULE_FOR_TODAY
                 : textGenerator.createTextForMessage(schedules);

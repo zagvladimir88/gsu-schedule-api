@@ -9,4 +9,5 @@ import java.util.List;
 
 public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
     List<Schedule> findByGroupAndDate(Group group, LocalDate date);
+    List<Schedule> findByGroupAndDateBetween(Group group, LocalDate startDate, LocalDate endDate);
 }

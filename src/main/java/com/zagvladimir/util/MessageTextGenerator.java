@@ -6,20 +6,42 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class MessageTextGenerator {
 
-    private static final String SCHEDULE_ENTRY_FORMAT = "%s: %s - %s %s (%s)";
+    private static final String SCHEDULE_ENTRY_FORMAT = "%s — %s в %s, ауд. %s (%s)";
     private static final String DAILY_HEADER = "Расписание на %s:\n\n";
 
     public String createTextForMessage(List<Schedule> schedules) {
-        return schedules.stream()
-                .map(this::formatScheduleEntry)
-                .collect(Collectors.joining("\n"));
+        Map<LocalDate, List<Schedule>> groupedByDate = schedules.stream()
+                .sorted(Comparator.comparing(Schedule::getDate)
+                        .thenComparing(Schedule::getStartTime))
+                .collect(Collectors.groupingBy(Schedule::getDate, LinkedHashMap::new, Collectors.toList()));
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy")
+                .withLocale(new Locale("ru")); // День недели по-русски
+
+        StringBuilder messageBuilder = new StringBuilder();
+
+        for (Map.Entry<LocalDate, List<Schedule>> entry : groupedByDate.entrySet()) {
+            LocalDate date = entry.getKey();
+            List<Schedule> dailySchedules = entry.getValue();
+
+            String dateHeader = capitalizeFirstLetter(date.format(dateFormatter));
+            messageBuilder.append(dateHeader).append("\n");
+
+            for (Schedule schedule : dailySchedules) {
+                messageBuilder.append(formatScheduleEntry(schedule)).append("\n");
+            }
+
+            messageBuilder.append("\n");
+        }
+
+        return messageBuilder.toString().trim();
     }
 
     public String createDailyScheduleText(List<Schedule> schedules, LocalDate date) {
@@ -35,5 +57,10 @@ public class MessageTextGenerator {
                 schedule.getClassroom().getNumber(),
                 schedule.getTeacher().getFullName()
         );
+    }
+
+    private String capitalizeFirstLetter(String text) {
+        if (text == null || text.isEmpty()) return text;
+        return text.substring(0, 1).toUpperCase() + text.substring(1);
     }
 }
